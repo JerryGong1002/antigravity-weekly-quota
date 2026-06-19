@@ -1,0 +1,5 @@
+_local-only/
+.agents/
+node_modules/
+*.vsix
+*.zip

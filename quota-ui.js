@@ -1,0 +1,100 @@
+'use strict';
+
+const GROUP_ORDER = new Map([
+  ['Gemini', 0],
+  ['Claude', 1],
+]);
+
+function percent(bucket) {
+  return Math.max(0, Math.min(100, Math.round((bucket?.remainingFraction ?? 0) * 100)));
+}
+
+function formatReset(resetTime, now = Date.now()) {
+  if (!resetTime) return 'Unknown';
+  const reset = new Date(resetTime).getTime();
+  if (!Number.isFinite(reset)) return 'Unknown';
+
+  const minutes = Math.floor(Math.max(0, reset - now) / 60_000);
+  const days = Math.floor(minutes / 1_440);
+  const hours = Math.floor((minutes % 1_440) / 60);
+  const mins = minutes % 60;
+
+  if (days) return `${days}d${hours ? `${hours}h` : ''}`;
+  if (hours) return `${hours}h${mins ? `${mins}min` : ''}`;
+  if (mins) return `${mins}min`;
+  return 'Now';
+}
+
+function quotaIndicator(value) {
+  if (value > 50) return '🟢';
+  if (value > 20) return '🟡';
+  return '🔴';
+}
+
+function canonicalGroupName(name) {
+  if (/gemini/i.test(name)) return 'Gemini';
+  if (/claude|gpt/i.test(name)) return 'Claude';
+  return undefined;
+}
+
+function normalize(quota) {
+  return (quota.groups || [])
+    .map((group) => {
+      const name = canonicalGroupName(group.displayName || '');
+      if (!name) return undefined;
+      const buckets = group.buckets || [];
+      const weekly = buckets.find((bucket) => /week/i.test(`${bucket.displayName || ''} ${bucket.window || ''}`));
+      const fiveHour = buckets.find((bucket) => /five|5.?hour/i.test(`${bucket.displayName || ''} ${bucket.window || ''}`));
+      return { name, weekly, fiveHour };
+    })
+    .filter(Boolean)
+    .sort((left, right) => GROUP_ORDER.get(left.name) - GROUP_ORDER.get(right.name));
+}
+
+function formatBucket(bucket, now = Date.now()) {
+  if (!bucket) return '⚪ —';
+  const remaining = percent(bucket);
+  return `${quotaIndicator(remaining)} ${remaining}% ${formatReset(bucket.resetTime, now)}`;
+}
+
+function formatStatusSegment(group, now = Date.now()) {
+  const weekly = group.weekly
+    ? `${quotaIndicator(percent(group.weekly))} ${group.name} ${percent(group.weekly)}% ${formatReset(group.weekly.resetTime, now)}`
+    : `⚪ ${group.name} —`;
+  return `${weekly} · ${formatBucket(group.fiveHour, now)}`;
+}
+
+function formatStatus(groups, now = Date.now()) {
+  return groups.map((group) => formatStatusSegment(group, now)).join(' ║ ');
+}
+
+function formatQuotaCells(bucket, now) {
+  if (!bucket) return '<td align="center">&nbsp;—</td><td align="center">—</td>';
+  return `<td align="center">&nbsp;${percent(bucket)}%</td><td align="center">${formatReset(bucket.resetTime, now)}</td>`;
+}
+
+function formatQuotaTable(groups, now = Date.now()) {
+  const rows = groups.map((group) => {
+    const indicatorBucket = group.weekly || group.fiveHour;
+    const indicator = indicatorBucket ? quotaIndicator(percent(indicatorBucket)) : '⚪';
+    return `<tr><td>${indicator} ${group.name}</td>${formatQuotaCells(group.weekly, now)}${formatQuotaCells(group.fiveHour, now)}</tr>`;
+  }).join('');
+
+  return [
+    '<table>',
+    '<thead><tr><th>Model</th><th colspan="2">&nbsp;Weekly quota</th><th colspan="2">&nbsp;5h quota</th></tr></thead>',
+    `<tbody>${rows}</tbody>`,
+    '</table>',
+  ].join('');
+}
+
+module.exports = {
+  canonicalGroupName,
+  formatQuotaTable,
+  formatReset,
+  formatStatus,
+  formatStatusSegment,
+  normalize,
+  percent,
+  quotaIndicator,
+};
