@@ -1,4 +1,4 @@
-# Antigravity 5h/Weekly Quota
+# Antigravity IDE 5h/Weekly Quota
 
 A lightweight VS Code extension that displays Google Antigravity five-hour and weekly quota in the status bar.
 
