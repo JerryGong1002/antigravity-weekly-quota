@@ -3,3 +3,7 @@ _local-only/
 node_modules/
 *.vsix
 *.zip
+
+# Local Codex conversation exports
+Chat_history_codex.txt
+Conversation_previous.md
