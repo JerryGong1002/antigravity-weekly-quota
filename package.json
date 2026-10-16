@@ -2,7 +2,7 @@
   "name": "antigravity-weekly-quota",
   "displayName": "Antigravity 5h/Weekly Quota",
   "description": "Show Antigravity CLI five-hour and weekly quota with color indicators.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "local-jerry",
   "license": "MIT",
   "repository": {

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
   <Metadata>
-    <Identity Language="en-US" Id="antigravity-weekly-quota" Version="0.3.1" Publisher="local-jerry" />
+    <Identity Language="en-US" Id="antigravity-weekly-quota" Version="0.3.2" Publisher="local-jerry" />
     <DisplayName>Antigravity 5h/Weekly Quota</DisplayName>
     <Description xml:space="preserve">Show Antigravity CLI five-hour and weekly quota with color indicators.</Description>
     <Tags>antigravity,agy,weekly quota,gemini,claude</Tags>

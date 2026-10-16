@@ -5,7 +5,8 @@ const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
 
-const API_BASE = 'https://daily-cloudcode-pa.googleapis.com/v1internal';
+// The daily endpoint can omit Gemini's weekly/5h group for the same account.
+const API_BASE = 'https://cloudcode-pa.googleapis.com/v1internal';
 const OAUTH_URL = 'https://oauth2.googleapis.com/token';
 const CLIENT_ID = '1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com';
 
