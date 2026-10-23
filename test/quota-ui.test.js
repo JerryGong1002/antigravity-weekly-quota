@@ -102,3 +102,24 @@ test('status uses a strong separator only between model groups', () => {
     '🟢 Gemini 90% 1d17h · 🟢 100% 5h ║ 🟡 Claude 26% 1d17h · 🟢 100% 5h'
   );
 });
+
+test('missing Gemini summary uses lowest model quota without inventing a window', () => {
+  const groups = normalize({ groups: [{ displayName: 'Claude', buckets: [{ window: '5h', remainingFraction: 1 }] }], modelQuotas: [{ remainingFraction: 0.98 }, { remainingFraction: 0.4 }] });
+  assert.equal(groups[0].modelQuota.remainingFraction, 0.4);
+  assert.equal(groups[0].weekly, undefined);
+  assert.equal(groups[0].fiveHour, undefined);
+  assert.equal(groups[1].fiveHour.remainingFraction, 1);
+  assert.match(formatStatus(groups), /Gemini 40% model/);
+  assert.match(formatQuotaTable(groups), /Model quota/);
+});
+
+test('missing model quota stays unknown and valid zero remains zero', () => {
+  assert.match(formatStatus(normalize({ groups: [] })), /Gemini —/);
+  assert.match(formatStatus(normalize({ groups: [], modelQuotas: [{ remainingFraction: 0 }] })), /Gemini 0% model/);
+});
+
+test('summary Gemini buckets take precedence over model fallback', () => {
+  const groups = normalize({ groups: [{ displayName: 'Gemini', buckets: [{ window: 'weekly', remainingFraction: 0.9 }] }], modelQuotas: [{ remainingFraction: 0.2 }] });
+  assert.equal(groups[0].weekly.remainingFraction, 0.9);
+  assert.equal(groups[0].modelQuota, undefined);
+});

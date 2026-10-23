@@ -5,3 +5,7 @@ node_modules/**
 test.js
 test/**
 docs/**
+_local-only/**
+Chat_history_codex.txt
+Conversation_previous.md
+packaging/**

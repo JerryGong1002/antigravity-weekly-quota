@@ -38,17 +38,25 @@ function canonicalGroupName(name) {
 }
 
 function normalize(quota) {
-  return (quota.groups || [])
+  const groups = (quota.groups || [])
     .map((group) => {
       const name = canonicalGroupName(group.displayName || '');
       if (!name) return undefined;
       const buckets = group.buckets || [];
       const weekly = buckets.find((bucket) => /week/i.test(`${bucket.displayName || ''} ${bucket.window || ''}`));
-      const fiveHour = buckets.find((bucket) => /five|5.?hour/i.test(`${bucket.displayName || ''} ${bucket.window || ''}`));
+      const fiveHour = buckets.find((bucket) => bucket.window === '5h' || /five|5.?hour/i.test(`${bucket.displayName || ''} ${bucket.window || ''}`));
       return { name, weekly, fiveHour };
     })
     .filter(Boolean)
     .sort((left, right) => GROUP_ORDER.get(left.name) - GROUP_ORDER.get(right.name));
+  if (!groups.some((group) => group.name === 'Gemini' && (group.weekly || group.fiveHour))) {
+    const models = (quota.modelQuotas || []).filter((model) => Number.isFinite(model.remainingFraction));
+    const modelQuota = models.reduce((lowest, model) => !lowest || model.remainingFraction < lowest.remainingFraction ? model : lowest, undefined);
+    const index = groups.findIndex((group) => group.name === 'Gemini');
+    if (index >= 0) groups.splice(index, 1);
+    groups.unshift({ name: 'Gemini', modelQuota });
+  }
+  return groups;
 }
 
 function formatBucket(bucket, now = Date.now()) {
@@ -58,6 +66,7 @@ function formatBucket(bucket, now = Date.now()) {
 }
 
 function formatStatusSegment(group, now = Date.now()) {
+  if (group.modelQuota) return `${quotaIndicator(percent(group.modelQuota))} ${group.name} ${percent(group.modelQuota)}% model ${formatReset(group.modelQuota.resetTime, now)}`;
   const weekly = group.weekly
     ? `${quotaIndicator(percent(group.weekly))} ${group.name} ${percent(group.weekly)}% ${formatReset(group.weekly.resetTime, now)}`
     : `⚪ ${group.name} —`;
@@ -74,15 +83,16 @@ function formatQuotaCells(bucket, now) {
 }
 
 function formatQuotaTable(groups, now = Date.now()) {
+  const hasModelQuota = groups.some((group) => group.modelQuota);
   const rows = groups.map((group) => {
-    const indicatorBucket = group.weekly || group.fiveHour;
+    const indicatorBucket = group.weekly || group.fiveHour || group.modelQuota;
     const indicator = indicatorBucket ? quotaIndicator(percent(indicatorBucket)) : '⚪';
-    return `<tr><td>${indicator} ${group.name}</td>${formatQuotaCells(group.weekly, now)}${formatQuotaCells(group.fiveHour, now)}</tr>`;
+    return `<tr><td>${indicator} ${group.name}</td>${formatQuotaCells(group.weekly, now)}${formatQuotaCells(group.fiveHour, now)}${hasModelQuota ? formatQuotaCells(group.modelQuota, now) : ''}</tr>`;
   }).join('');
 
   return [
     '<table>',
-    '<thead><tr><th>Model</th><th colspan="2">&nbsp;Weekly quota</th><th colspan="2">&nbsp;5h quota</th></tr></thead>',
+    `<thead><tr><th>Model</th><th colspan="2">&nbsp;Weekly quota</th><th colspan="2">&nbsp;5h quota</th>${hasModelQuota ? '<th colspan="2">&nbsp;Model quota</th>' : ''}</tr></thead>`,
     `<tbody>${rows}</tbody>`,
     '</table>',
   ].join('');

@@ -18,6 +18,8 @@ Indicator colors are based on the remaining quota:
 
 ## Features
 
+- When Gemini is omitted from the weekly/5h summary, reads `fetchAvailableModels` and shows a separate **model quota**. Its window is unspecified by the server. The status bar uses the lowest reported Gemini balance; the details list shows each model. Missing data stays unknown.
+
 - Displays Gemini and Claude/GPT weekly and five-hour quota.
 - Shows compact reset countdowns such as `4h59min` and `1d17h`.
 - Provides a hover table with grouped `Weekly quota` and `5h quota` columns.

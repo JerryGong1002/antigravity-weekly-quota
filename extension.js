@@ -27,6 +27,8 @@ function renderStatus(data) {
   tooltip.supportHtml = true;
   tooltip.appendMarkdown('### Antigravity 5h/Weekly Quota\n\n');
   tooltip.appendMarkdown(`${formatQuotaTable(groups)}\n\n`);
+  if (groups.some((group) => group.modelQuota)) tooltip.appendMarkdown('Model quota: lowest reported Gemini model balance; window unspecified by server.\n\n');
+  if (data.quota.warning) tooltip.appendText(data.quota.warning);
   if (data.account) tooltip.appendMarkdown(`\nPlan: ${data.account}`);
   tooltip.appendMarkdown(`\n\nUpdated: ${new Date(data.fetchedAt).toLocaleTimeString('en-US')} · [Refresh now](command:antigravityWeeklyQuota.refresh)`);
   tooltip.isTrusted = { enabledCommands: ['antigravityWeeklyQuota.refresh'] };
@@ -67,6 +69,13 @@ async function showDetails(context) {
   if (!latest) return;
   const items = [];
   for (const group of normalize(latest.quota)) {
+    if (group.modelQuota) {
+      for (const model of latest.quota.modelQuotas) items.push({
+        label: `${quotaIndicator(percent(model))} ${model.displayName} — ${percent(model)}% model quota remaining`,
+        description: `Resets in ${formatReset(model.resetTime)}; window unspecified`,
+      });
+    }
+    if (!group.weekly && !group.fiveHour && !group.modelQuota) items.push({ label: `${group.name} — quota not reported` });
     if (group.weekly) {
       items.push({
         label: `${quotaIndicator(percent(group.weekly))} ${group.name} — ${percent(group.weekly)}% weekly remaining`,

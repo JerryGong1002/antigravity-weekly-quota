@@ -183,6 +183,22 @@ async function fetchQuota(extensionPath, cachedToken) {
     throw new Error('The quota response does not contain groups.');
   }
 
+  if (!quota.groups.some((group) => /gemini/i.test(group.displayName || '') && group.buckets?.length)) {
+    try {
+      const models = await requestJson(`${API_BASE}:fetchAvailableModels`, {
+        method: 'POST', headers,
+        body: JSON.stringify({ project: account.cloudaicompanionProject }),
+      });
+      quota.modelQuotas = Object.entries(models.models || {})
+        .filter(([id, model]) => /gemini/i.test(`${id} ${model.displayName || ''}`))
+        .filter(([, model]) => Number.isFinite(model.quotaInfo?.remainingFraction))
+        .map(([id, model]) => ({ id, displayName: model.displayName || id, ...model.quotaInfo }));
+      if (!quota.modelQuotas.length) quota.warning = 'Gemini quota was not reported by the server.';
+    } catch {
+      quota.warning = 'Gemini model quota lookup failed. Refresh to retry.';
+    }
+  }
+
   return {
     quota,
     token,
@@ -198,6 +214,8 @@ if (require.main === module) {
     .then(({ quota, account }) => {
       const safe = {
         account,
+        modelQuotas: quota.modelQuotas,
+        warning: quota.warning,
         groups: quota.groups.map((group) => ({
           displayName: group.displayName,
           buckets: (group.buckets || []).map((bucket) => ({
