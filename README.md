@@ -1,14 +1,28 @@
 # Antigravity IDE 5h/Weekly Quota
 
-A lightweight VS Code extension that displays Google Antigravity five-hour and weekly quota in the status bar.
+A Windows extension for Antigravity IDE and VS Code that shows remaining Gemini and Claude/GPT five-hour and weekly quota in the status bar.
+
+**Open the IDE and quota refreshes automatically.** After installing and signing in to Antigravity CLI (`agy`) once, you do not need to keep a CLI session or the standalone Antigravity app running. The extension reuses the saved sign-in and queries Google's remote quota API directly.
+
+Version **0.3.4** restores Gemini's separate weekly and five-hour meters with a Hub-compatible request identity.
 
 ![Antigravity 5h/Weekly Quota hover panel](assets/antigravity-5h-weekly-quota.png)
+
+Example layout; balances and reset times depend on your account.
 
 ## Status bar
 
 > 🟢 Gemini 90% 1d17h · 🟢 100% 5h ║ 🟡 Claude 26% 1d17h · 🟢 100% 5h
 
 Each model group shows its weekly quota first and its five-hour quota second. A light `·` separates quota windows within a model, while `║` separates Gemini from Claude.
+
+| Meter | Meaning |
+|---|---|
+| Gemini — Weekly / 5h | Remaining fractions in the server's shared Gemini weekly and five-hour buckets |
+| Claude — Weekly / 5h | Remaining fractions in the shared Claude/GPT weekly and five-hour buckets |
+| Model quota, when shown | Fallback when the Gemini summary is missing: lowest reported Gemini model balance, with its corresponding reset time |
+
+Percentages are server-reported remaining fractions rounded to whole percentages. Countdown values come from each bucket's reset timestamp; they are not the duration of the quota window. The extension does not estimate quota from local token counts or requests. A dash means that window was not reported.
 
 Indicator colors are based on the remaining quota:
 
@@ -18,13 +32,12 @@ Indicator colors are based on the remaining quota:
 
 ## Features
 
-- When Gemini is omitted from the weekly/5h summary, reads `fetchAvailableModels` and shows a separate **model quota**. Its window is unspecified by the server. The status bar uses the lowest reported Gemini balance; the details list shows each model. Missing data stays unknown.
-
 - Displays Gemini and Claude/GPT weekly and five-hour quota.
 - Shows compact reset countdowns such as `4h59min` and `1d17h`.
 - Provides a hover table with grouped `Weekly quota` and `5h quota` columns.
 - Refreshes automatically and supports manual refresh from the hover panel or Command Palette.
 - Reuses the existing Antigravity CLI sign-in without writing the CLI credential to disk.
+- Falls back to Gemini model quota if the summary omits Gemini; individual model values appear in the details list. The fallback's period remains unspecified because the model response does not identify it.
 
 ## Requirements
 
@@ -32,21 +45,24 @@ Indicator colors are based on the remaining quota:
 - Visual Studio Code 1.90 or later, or a compatible Antigravity IDE build
 - Antigravity CLI (`agy`) installed
 - At least one successful `agy` sign-in
+- Internet access to Google's Cloud Code and OAuth endpoints
+
+The saved agy sign-in and installed binary are required; a running agy process is not. Set `AGY_PATH` in the IDE's environment if the binary is outside `%LOCALAPPDATA%\agy\bin\agy.exe`.
 
 ## Installation
 
 ### Install a VSIX
 
-1. Download the latest `.vsix` from this repository's Releases page when available.
+1. Download the `.vsix` from the [latest release](https://github.com/JerryGong1002/antigravity-weekly-quota/releases/latest).
 2. Open the Extensions view in VS Code or Antigravity IDE.
 3. Select **Views and More Actions** (`...`) → **Install from VSIX...**.
-4. Select the downloaded file and reload the window.
+4. Select the downloaded file and run **Developer: Reload Window**. This also loads the new version after an upgrade.
 
 ### Run from source
 
 1. Clone this repository.
 2. Open it in VS Code.
-3. Press `F5` to launch an Extension Development Host.
+3. Launch an Extension Development Host with `code --extensionDevelopmentPath="<absolute-path-to-this-repository>"`.
 
 ## Usage
 
@@ -55,6 +71,20 @@ Indicator colors are based on the remaining quota:
 - Run **Antigravity 5h/Weekly Quota: Refresh** from the Command Palette to refresh immediately.
 
 The refresh interval defaults to 120 seconds and can be changed with `antigravityWeeklyQuota.refreshIntervalSeconds`.
+
+## Data source and compatibility
+
+The extension calls `loadCodeAssist` and `retrieveUserQuotaSummary` on `https://cloudcode-pa.googleapis.com/v1internal`, using the compatibility User-Agent `antigravity/hub/2.9.1 windows/amd64`. It does not connect to a local language server.
+
+On October 23, 2026, testing with the same credential, project, and request body showed that the legacy `antigravity/cli/1.0.9` identity omitted Gemini summary buckets, while the Hub identity returned explicit `gemini-weekly` and `gemini-5h` buckets. Switching back to the CLI identity reproduced the omission. Both production and daily hosts returned the Gemini summary with the Hub identity; the extension uses production. This request identity is also used by [CodexBar's Antigravity OAuth integration](https://github.com/steipete/CodexBar/blob/main/docs/antigravity.md).
+
+When Gemini summary data is missing, the extension calls `fetchAvailableModels`. Its model quota fallback appears separately from Weekly and 5h; it never fills a missing weekly bucket with a model balance. A separate Gemini 4 Argon weekly pool was observed through the standalone app's local API, but dedicated Argon reporting is not implemented in this extension.
+
+## Troubleshooting
+
+- **Still seeing only Model quota after upgrading:** run **Developer: Reload Window**, then **Antigravity 5h/Weekly Quota: Refresh**. If the server still omits Gemini summary data, the fallback remains visible.
+- **Quota unavailable:** check network access, the installed agy path, and your saved login. If authentication has expired or been revoked, sign in to agy again and refresh.
+- **A window shows a dash:** the server did not report that window. It is not treated as zero remaining quota.
 
 ## Development
 
@@ -67,7 +97,7 @@ npm test
 Package the extension with [`@vscode/vsce`](https://github.com/microsoft/vscode-vsce):
 
 ```powershell
-npm run package
+npx --yes @vscode/vsce package --no-dependencies
 ```
 
 ## Privacy and security

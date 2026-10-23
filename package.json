@@ -1,8 +1,8 @@
 {
   "name": "antigravity-weekly-quota",
   "displayName": "Antigravity 5h/Weekly Quota",
-  "description": "Show Antigravity CLI five-hour and weekly quota with color indicators.",
-  "version": "0.3.3",
+  "description": "Show Gemini and Claude/GPT five-hour and weekly quota in Antigravity IDE and VS Code using your saved agy sign-in.",
+  "version": "0.3.4",
   "publisher": "local-jerry",
   "license": "MIT",
   "repository": {

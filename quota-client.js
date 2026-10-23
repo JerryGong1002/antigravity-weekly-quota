@@ -8,6 +8,9 @@ const { execFile } = require('child_process');
 // The daily endpoint can omit Gemini's weekly/5h group for the same account.
 const API_BASE = 'https://cloudcode-pa.googleapis.com/v1internal';
 const OAUTH_URL = 'https://oauth2.googleapis.com/token';
+// The legacy CLI identity omits Gemini summary buckets. This Hub identity is
+// also used by CodexBar's OAuth provider and was verified against both hosts.
+const QUOTA_USER_AGENT = 'antigravity/hub/2.9.1 windows/amd64';
 const CLIENT_ID = '1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com';
 
 function execFileAsync(file, args, options = {}) {
@@ -156,13 +159,11 @@ async function fetchQuota(extensionPath, cachedToken) {
     token = await refreshAccessToken(credential.token.refresh_token, agyPath);
   }
 
-  const version = await agyVersion(agyPath);
-  const userAgent = `antigravity/cli/${version} windows/amd64`;
   const headers = {
     Authorization: `Bearer ${token.access_token}`,
     'Content-Type': 'application/json',
     Accept: 'application/json',
-    'User-Agent': userAgent,
+    'User-Agent': QUOTA_USER_AGENT,
   };
 
   const account = await requestJson(`${API_BASE}:loadCodeAssist`, {
