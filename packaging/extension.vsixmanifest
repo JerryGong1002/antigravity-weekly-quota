@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PackageManifest Version="2.0.0" xmlns="http://schemas.microsoft.com/developer/vsx-schema/2011">
   <Metadata>
-    <Identity Language="en-US" Id="antigravity-weekly-quota" Version="0.3.4" Publisher="local-jerry" />
+    <Identity Language="en-US" Id="antigravity-weekly-quota" Version="0.3.5" Publisher="local-jerry" />
     <DisplayName>Antigravity 5h/Weekly Quota</DisplayName>
-    <Description xml:space="preserve">Show Gemini and Claude/GPT five-hour and weekly quota in Antigravity IDE and VS Code using your saved agy sign-in.</Description>
+    <Description xml:space="preserve">Show Gemini, Claude/GPT and separate Argon weekly quota in Antigravity IDE and VS Code using your saved agy sign-in.</Description>
     <Tags>antigravity,agy,weekly quota,gemini,claude</Tags>
     <Categories>Other</Categories>
     <Properties>

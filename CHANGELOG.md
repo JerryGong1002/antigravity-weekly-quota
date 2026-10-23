@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.5 — 2026-10-23
+
+- Added a separate Argon weekly meter to the status bar, hover table, and details list.
+- Updated the Hub request identity to 2.25.0; verified remote retrieval of the Argon weekly bucket without a local application dependency.
+- Keep Argon separate from shared Gemini quotas and model fallback; omit absent, disabled, or malformed Argon buckets.
+- Retain weekly-only display for Argon and the existing Gemini/Claude weekly and five-hour layout.
+
 ## 0.3.4 — 2026-10-23
 
 - Restored Gemini weekly and 5h summary buckets using the verified Hub request identity instead of the legacy CLI identity.

@@ -3,6 +3,7 @@
 const GROUP_ORDER = new Map([
   ['Gemini', 0],
   ['Claude', 1],
+  ['Argon', 2],
 ]);
 
 function percent(bucket) {
@@ -32,6 +33,8 @@ function quotaIndicator(value) {
 }
 
 function canonicalGroupName(name) {
+  if (/^Gemini 4 Argon$/i.test(name)) return 'Argon';
+  if (/argon/i.test(name)) return undefined;
   if (/gemini/i.test(name)) return 'Gemini';
   if (/claude|gpt/i.test(name)) return 'Claude';
   return undefined;
@@ -43,6 +46,10 @@ function normalize(quota) {
       const name = canonicalGroupName(group.displayName || '');
       if (!name) return undefined;
       const buckets = group.buckets || [];
+      if (name === 'Argon') {
+        const weekly = buckets.find((bucket) => bucket.bucketId === 'gemini-argon-wtu-weekly' && bucket.window === 'weekly' && !bucket.disabled && !group.disabled && Number.isFinite(bucket.remainingFraction));
+        return weekly ? { name, weekly } : undefined;
+      }
       const weekly = buckets.find((bucket) => /week/i.test(`${bucket.displayName || ''} ${bucket.window || ''}`));
       const fiveHour = buckets.find((bucket) => bucket.window === '5h' || /five|5.?hour/i.test(`${bucket.displayName || ''} ${bucket.window || ''}`));
       return { name, weekly, fiveHour };
@@ -50,7 +57,7 @@ function normalize(quota) {
     .filter(Boolean)
     .sort((left, right) => GROUP_ORDER.get(left.name) - GROUP_ORDER.get(right.name));
   if (!groups.some((group) => group.name === 'Gemini' && (group.weekly || group.fiveHour))) {
-    const models = (quota.modelQuotas || []).filter((model) => Number.isFinite(model.remainingFraction));
+    const models = (quota.modelQuotas || []).filter((model) => !/argon/i.test(`${model.id || ''} ${model.displayName || ''}`) && Number.isFinite(model.remainingFraction));
     const modelQuota = models.reduce((lowest, model) => !lowest || model.remainingFraction < lowest.remainingFraction ? model : lowest, undefined);
     const index = groups.findIndex((group) => group.name === 'Gemini');
     if (index >= 0) groups.splice(index, 1);
@@ -70,7 +77,7 @@ function formatStatusSegment(group, now = Date.now()) {
   const weekly = group.weekly
     ? `${quotaIndicator(percent(group.weekly))} ${group.name} ${percent(group.weekly)}% ${formatReset(group.weekly.resetTime, now)}`
     : `⚪ ${group.name} —`;
-  return `${weekly} · ${formatBucket(group.fiveHour, now)}`;
+  return group.name === 'Argon' ? weekly : `${weekly} · ${formatBucket(group.fiveHour, now)}`;
 }
 
 function formatStatus(groups, now = Date.now()) {

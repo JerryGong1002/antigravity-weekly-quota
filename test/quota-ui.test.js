@@ -123,3 +123,31 @@ test('summary Gemini buckets take precedence over model fallback', () => {
   assert.equal(groups[0].weekly.remainingFraction, 0.9);
   assert.equal(groups[0].modelQuota, undefined);
 });
+
+test('Argon is a separate weekly-only row in all quota displays', () => {
+  const weekly = { bucketId: 'gemini-argon-wtu-weekly', window: 'weekly', remainingFraction: 0, resetTime: '2026-10-30T08:00:00Z' };
+  const groups = normalize({ groups: [
+    { displayName: 'Gemini 4 Argon', buckets: [weekly] },
+    { displayName: 'Claude and GPT models', buckets: [{ window: 'weekly', remainingFraction: 1 }] },
+    { displayName: 'Gemini Models', buckets: [{ window: 'weekly', remainingFraction: 0.94 }] },
+  ] });
+  assert.deepEqual(groups.map(g => g.name), ['Gemini', 'Claude', 'Argon']);
+  assert.equal(groups[0].weekly.remainingFraction, 0.94);
+  assert.equal(groups[2].weekly, weekly);
+  assert.equal(groups[2].fiveHour, undefined);
+  assert.equal(formatStatusSegment(groups[2], Date.parse('2026-10-23T08:00:00Z')), '🔴 Argon 0% 7d');
+  assert.match(formatQuotaTable(groups), /Argon<\/td><td align="center">&nbsp;0%/);
+});
+
+test('absent, disabled and malformed Argon buckets do not create a meter', () => {
+  for (const buckets of [[], [{ window: 'weekly', remainingFraction: 1 }], [{ bucketId: 'gemini-argon-wtu-weekly', window: 'weekly' }], [{ bucketId: 'gemini-argon-wtu-weekly', window: 'weekly', remainingFraction: 1, disabled: true }]]) {
+    assert.equal(normalize({ groups: [{ displayName: 'Gemini 4 Argon', buckets }] }).some(g => g.name === 'Argon'), false);
+  }
+  assert.equal(normalize({ groups: [] }).some(g => g.name === 'Argon'), false);
+});
+
+test('Argon does not mask missing shared Gemini or enter its model fallback', () => {
+  const groups = normalize({ groups: [{ displayName: 'Gemini 4 Argon', buckets: [{ bucketId: 'gemini-argon-wtu-weekly', window: 'weekly', remainingFraction: 1 }] }], modelQuotas: [{ id: 'gemini-4-argon', remainingFraction: 0.1 }, { id: 'gemini-flash', remainingFraction: 0.8 }] });
+  assert.deepEqual(groups.map(g => g.name), ['Gemini', 'Argon']);
+  assert.equal(groups[0].modelQuota.remainingFraction, 0.8);
+});

@@ -8,9 +8,9 @@ const { execFile } = require('child_process');
 // The daily endpoint can omit Gemini's weekly/5h group for the same account.
 const API_BASE = 'https://cloudcode-pa.googleapis.com/v1internal';
 const OAUTH_URL = 'https://oauth2.googleapis.com/token';
-// The legacy CLI identity omits Gemini summary buckets. This Hub identity is
-// also used by CodexBar's OAuth provider and was verified against both hosts.
-const QUOTA_USER_AGENT = 'antigravity/hub/2.9.1 windows/amd64';
+// Legacy client identities omit newer quota groups. Hub 2.25.0 was verified
+// against both hosts to return shared Gemini and separate Argon buckets.
+const QUOTA_USER_AGENT = 'antigravity/hub/2.25.0 windows/amd64';
 const CLIENT_ID = '1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com';
 
 function execFileAsync(file, args, options = {}) {
@@ -184,7 +184,7 @@ async function fetchQuota(extensionPath, cachedToken) {
     throw new Error('The quota response does not contain groups.');
   }
 
-  if (!quota.groups.some((group) => /gemini/i.test(group.displayName || '') && group.buckets?.length)) {
+  if (!quota.groups.some((group) => /gemini/i.test(group.displayName || '') && !/argon/i.test(group.displayName || '') && group.buckets?.length)) {
     try {
       const models = await requestJson(`${API_BASE}:fetchAvailableModels`, {
         method: 'POST', headers,
@@ -192,6 +192,7 @@ async function fetchQuota(extensionPath, cachedToken) {
       });
       quota.modelQuotas = Object.entries(models.models || {})
         .filter(([id, model]) => /gemini/i.test(`${id} ${model.displayName || ''}`))
+        .filter(([id, model]) => !/argon/i.test(`${id} ${model.displayName || ''}`))
         .filter(([, model]) => Number.isFinite(model.quotaInfo?.remainingFraction))
         .map(([id, model]) => ({ id, displayName: model.displayName || id, ...model.quotaInfo }));
       if (!quota.modelQuotas.length) quota.warning = 'Gemini quota was not reported by the server.';

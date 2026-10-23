@@ -1,10 +1,10 @@
 # Antigravity IDE 5h/Weekly Quota
 
-A Windows extension for Antigravity IDE and VS Code that shows remaining Gemini and Claude/GPT five-hour and weekly quota in the status bar.
+A Windows extension for Antigravity IDE and VS Code that shows remaining Gemini and Claude/GPT five-hour and weekly quota, plus separate Argon weekly quota when available.
 
 **Open the IDE and quota refreshes automatically.** After installing and signing in to Antigravity CLI (`agy`) once, you do not need to keep a CLI session or the standalone Antigravity app running. The extension reuses the saved sign-in and queries Google's remote quota API directly.
 
-Version **0.3.4** restores Gemini's separate weekly and five-hour meters with a Hub-compatible request identity.
+Version **0.3.5** adds a separate Argon weekly meter when the server reports an enabled Argon bucket.
 
 ![Antigravity 5h/Weekly Quota hover panel](assets/antigravity-5h-weekly-quota.png)
 
@@ -12,7 +12,7 @@ Example layout; balances and reset times depend on your account.
 
 ## Status bar
 
-> 🟢 Gemini 90% 1d17h · 🟢 100% 5h ║ 🟡 Claude 26% 1d17h · 🟢 100% 5h
+> 🟢 Gemini 90% 1d17h · 🟢 100% 5h ║ 🟡 Claude 26% 1d17h · 🟢 100% 5h ║ 🟢 Argon 100% 6d23h
 
 Each model group shows its weekly quota first and its five-hour quota second. A light `·` separates quota windows within a model, while `║` separates Gemini from Claude.
 
@@ -20,6 +20,7 @@ Each model group shows its weekly quota first and its five-hour quota second. A 
 |---|---|
 | Gemini — Weekly / 5h | Remaining fractions in the server's shared Gemini weekly and five-hour buckets |
 | Claude — Weekly / 5h | Remaining fractions in the shared Claude/GPT weekly and five-hour buckets |
+| Argon — Weekly | Separate Gemini 4 Argon weekly balance, when reported; no five-hour bucket is inferred |
 | Model quota, when shown | Fallback when the Gemini summary is missing: lowest reported Gemini model balance, with its corresponding reset time |
 
 Percentages are server-reported remaining fractions rounded to whole percentages. Countdown values come from each bucket's reset timestamp; they are not the duration of the quota window. The extension does not estimate quota from local token counts or requests. A dash means that window was not reported.
@@ -74,11 +75,11 @@ The refresh interval defaults to 120 seconds and can be changed with `antigravit
 
 ## Data source and compatibility
 
-The extension calls `loadCodeAssist` and `retrieveUserQuotaSummary` on `https://cloudcode-pa.googleapis.com/v1internal`, using the compatibility User-Agent `antigravity/hub/2.9.1 windows/amd64`. It does not connect to a local language server.
+The extension calls `loadCodeAssist` and `retrieveUserQuotaSummary` on `https://cloudcode-pa.googleapis.com/v1internal`, using the compatibility User-Agent `antigravity/hub/2.25.0 windows/amd64`. It does not connect to a local language server.
 
 On October 23, 2026, testing with the same credential, project, and request body showed that the legacy `antigravity/cli/1.0.9` identity omitted Gemini summary buckets, while the Hub identity returned explicit `gemini-weekly` and `gemini-5h` buckets. Switching back to the CLI identity reproduced the omission. Both production and daily hosts returned the Gemini summary with the Hub identity; the extension uses production. This request identity is also used by [CodexBar's Antigravity OAuth integration](https://github.com/steipete/CodexBar/blob/main/docs/antigravity.md).
 
-When Gemini summary data is missing, the extension calls `fetchAvailableModels`. Its model quota fallback appears separately from Weekly and 5h; it never fills a missing weekly bucket with a model balance. A separate Gemini 4 Argon weekly pool was observed through the standalone app's local API, but dedicated Argon reporting is not implemented in this extension.
+When Gemini summary data is missing, the extension calls `fetchAvailableModels`. Its model quota fallback appears separately from Weekly and 5h; it never fills a missing weekly bucket with a model balance. The current Hub 2.25.0 identity also returns the separate `gemini-argon-wtu-weekly` bucket remotely. Argon appears after Claude in the status bar, hover table, and details list, with only a weekly value. Accounts without an enabled separate bucket have no Argon row. The server describes paid Pro Argon quota as separate and Ultra Argon usage as part of the larger shared Gemini pool; Ultra behavior has not been tested with an Ultra account. Reading quota in the IDE does not require that IDE to support using the model.
 
 ## Troubleshooting
 
